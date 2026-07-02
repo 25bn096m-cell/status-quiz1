@@ -369,6 +369,27 @@
     color: var(--text2);
   }
 
+  /* Debuff badge - shows weakness like a status ailment */
+  .debuff-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2a0d0d;
+    color: var(--coral);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    margin: 0.5rem 0 0.6rem;
+    border: 2px solid var(--coral);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.8);
+    letter-spacing: 0.05em;
+    animation: debuffPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes debuffPulse {
+    0%, 100% { box-shadow: 3px 3px 0 rgba(0,0,0,0.8), 0 0 0 rgba(255,68,68,0); }
+    50% { box-shadow: 3px 3px 0 rgba(0,0,0,0.8), 0 0 10px rgba(255,68,68,0.7); }
+  }
+
   .res-section {
     background: var(--surface);
     border: 3px solid var(--panel-border);
@@ -553,7 +574,7 @@
     <div class="hero">
       <span class="hero-badge">★ MBTI風　自己分析クエスト ★</span>
       <h1>いまの自分を<br>ちゃんと知ろう</h1>
-      <p>スライダーを動かすだけで、あなたの今のステータスとタイプキャラがわかります。<br><span class="blink">▼</span></p>
+      <p>スライダーを動かすだけで、あなたの今のステータスとジョブ（職業）、そして隠れた弱点ステータスまでわかります。<br><span class="blink">▼</span></p>
     </div>
 
     <div class="info-cards">
@@ -611,13 +632,14 @@
   <div class="wrap">
     <div class="result-hero">
       <span class="char-emoji" id="r-emoji"></span>
-      <div class="char-badge">★ あなたのタイプ ★</div>
+      <div class="char-badge">★ あなたのジョブ ★</div>
       <div class="char-name" id="r-name"></div>
+      <div class="debuff-badge">⚠ 弱点：<span id="r-debuff"></span></div>
       <div class="char-type" id="r-type"></div>
     </div>
 
     <div class="res-section rpg-panel">
-      <div class="res-section-title">▶ あなたについて</div>
+      <div class="res-section-title">▶ キャラクター紹介</div>
       <div class="res-desc" id="r-desc"></div>
     </div>
 
@@ -625,12 +647,12 @@
     <div class="stat-grid" id="r-stats"></div>
 
     <div class="res-section rpg-panel">
-      <div class="res-section-title">▶ 強み</div>
+      <div class="res-section-title">▶ 得意スキル</div>
       <ul class="point-list" id="r-strengths"></ul>
     </div>
 
     <div class="res-section rpg-panel">
-      <div class="res-section-title">▶ 直したいかも？なところ</div>
+      <div class="res-section-title">▶ 弱点ステータス（直したいかも？なところ）</div>
       <ul class="point-list" id="r-weaks"></ul>
     </div>
 
@@ -661,65 +683,65 @@ questions.forEach(q => vals[q.id] = 50);
 
 const characters = [
   {
-    name:"孤独な思索者", emoji:"🌙", type:"内向・感情型",
+    name:"落ち込みやすい賢者", emoji:"🌙", type:"賢者系ジョブ", weakness:"自己批判 過多",
     cond: s => s.social < 40 && s.emotion > 55 && s.selfcrit > 55,
-    desc:"一人の時間が好きで、物事を深く考える。感情が豊かな分、傷つきやすく、自分を責めてしまうことも。内側に宝がいっぱい詰まっているタイプ。",
+    desc:"一人の時間で力を溜める思考タイプの賢者。知恵と洞察の魔力は高いが、詠唱のたびに自分へダメージを与えてしまう「自己批判」のクセ持ち。内側に宝がいっぱい詰まっているタイプ。",
     strengths:["深い洞察力と共感力がある","真剣に物事に向き合える","自己分析が得意"],
     weaks:["自己批判が強くなりすぎる","人と比べてへこんでしまう","行動するまでに時間がかかる"],
     hint:"「直したいネガティブ」を選ぶとき、自己批判と比較癖に注目してみよう。自分に優しくするのがこのワークのテーマかも。"
   },
   {
-    name:"熱血行動派", emoji:"🔥", type:"外向・行動型",
+    name:"猪突猛進な戦士", emoji:"🔥", type:"戦士系ジョブ", weakness:"計画性 不足",
     cond: s => s.social > 60 && s.action > 60 && s.plan < 45,
-    desc:"エネルギッシュで思い立ったらすぐ動ける。勢いはあるが、計画性が薄く後で困ることも。でもその推進力は本物！",
+    desc:"攻撃力・行動力ともにMAX級の前衛アタッカー。思い立ったら即突撃できるが、作戦を立てずに突っ込むクセがあり、気づけばHPがピンチのことも。それでもその推進力は本物！",
     strengths:["行動が早くフットワーク軽い","周りを巻き込む力がある","失敗を引きずらない"],
     weaks:["計画を立てずに動きすぎる","後先を考えずに突っ走る","ひとりで抱え込んで燃え尽きる"],
     hint:"計画性を少しだけ意識するだけで、行動の質がぐっと上がる。アクションプランの「期限設定」を丁寧にやってみて。"
   },
   {
-    name:"慎重な完璧主義者", emoji:"📐", type:"計画・自己批判型",
+    name:"詠唱長すぎる魔法使い", emoji:"🧙", type:"魔法使い系ジョブ", weakness:"行動力 不足",
     cond: s => s.plan > 60 && s.selfcrit > 60 && s.action < 55,
-    desc:"準備万端にしないと動けないタイプ。細かいところまで気にするが、完璧を求めすぎてフリーズしてしまうことも。質へのこだわりは本物。",
+    desc:"準備魔法・分析魔法が得意な理論派メイジ。完璧な呪文を組み立てようとするあまり、詠唱（＝行動）が長引いてタイミングを逃しがち。魔力の質へのこだわりは本物。",
     strengths:["緻密な準備ができる","ミスを減らせる","品質にこだわれる"],
     weaks:["完璧主義で動き出せない","自分に厳しすぎる","失敗を恐れてチャレンジを避けがち"],
     hint:"「完璧じゃなくていい」が合言葉。60点で出すことを練習するアクションを考えてみて。"
   },
   {
-    name:"気遣いマスター", emoji:"🫶", type:"他者配慮・共感型",
+    name:"断れない僧侶", emoji:"⛪", type:"僧侶系ジョブ", weakness:"自己表現力 不足",
     cond: s => s.care > 65 && s.express < 50 && s.emotion > 50,
-    desc:"人のことを優先しすぎて、自分のことは後回しになりがち。頼まれると断れないことも多い。でも信頼される存在。",
+    desc:"回復魔法でパーティ全員を支える頼れるヒーラー。人を優先しすぎて自分のHP回復を後回しにしがちで、頼まれごとを断れないクセあり。でも一番信頼される存在。",
     strengths:["場の空気が読める","人を大切にできる","信頼されやすい"],
     weaks:["自分の気持ちを言えない","NOが言えない","他人の評価が気になりすぎる"],
     hint:"「自分のニーズを1つ声に出す」をワークの中で意識してみよう。よしよしタイムで自分を労わる練習から始めよう。"
   },
   {
-    name:"比較モンスター", emoji:"👁", type:"比較・自己否定型",
+    name:"周りが気になる斥候", emoji:"🏹", type:"斥候系ジョブ", weakness:"比較癖 強め",
     cond: s => s.compare > 65 && s.selfcrit > 55,
-    desc:"SNSや周りと自分を比べてしまい、自己評価が下がりやすい。でも向上心の裏返しでもある。比較先をうまく使えると強い！",
+    desc:"観察力バツグンのスカウトタイプ。周囲の動きを敏感に察知できる反面、他人と自分を比べて自己評価を下げがち。でもそれは向上心の裏返しでもある。索敵範囲をうまく使えると強い！",
     strengths:["向上心がある","観察力が高い","他者の良さを見つけられる"],
     weaks:["比べて落ち込む","自分に自信が持てない","ネガティブが止まらない"],
     hint:"比較先をロールモデルとして使えるのがこのワークの鍵。「理想のキャラが何をしているか」を想像するパートが特に効くはず！"
   },
   {
-    name:"明るいムードメーカー", emoji:"🌟", type:"外向・感情表現型",
+    name:"空元気な吟遊詩人", emoji:"🎭", type:"吟遊詩人系ジョブ", weakness:"感情処理 後回し",
     cond: s => s.social > 60 && s.express > 60 && s.emotion < 55,
-    desc:"自分の気持ちをどんどん表現できて、場を明るくする力がある。ただし、ひとりで頑張りすぎて燃え尽きることも。",
+    desc:"歌と言葉で場を盛り上げるパーティのムードメーカー。表現力は高いが、自分がしんどいときも明るく振る舞い続けてしまい、気づけばMPが切れかけていることも。",
     strengths:["表現力が高い","人を元気にできる","フットワークが軽い"],
     weaks:["無理して明るく振る舞う","弱みを見せられない","一人になると燃え尽きる"],
     hint:"「本当はしんどいときにSOSを出せるか？」をテーマに振り返って。弱さを見せることがむしろ強さになる。"
   },
   {
-    name:"静かなリアリスト", emoji:"🗿", type:"内向・論理型",
+    name:"共感が苦手な軍師", emoji:"📜", type:"軍師系ジョブ", weakness:"感情表現 不足",
     cond: s => s.social < 45 && s.emotion < 45 && s.plan > 50,
-    desc:"感情より事実と論理で動くタイプ。冷静だが、共感が薄いと思われることも。信頼性と安定感は抜群。",
+    desc:"感情より事実と論理で戦況を読む参謀タイプ。冷静な判断力は頼りになるが、共感の魔法が苦手で「冷たい」と誤解されることも。信頼性と安定感は抜群。",
     strengths:["冷静に判断できる","感情に流されない","分析が得意"],
     weaks:["感情表現が乏しい","人と距離を置きすぎる","共感するのが苦手"],
     hint:"ワーク中、感情的な言葉を意識して使ってみることが成長のカギ。よしよしタイムを大切にしてみて。"
   },
   {
-    name:"迷子の可能性人間", emoji:"🌀", type:"バランス迷子型",
+    name:"迷える見習い冒険者", emoji:"🔰", type:"見習い系ジョブ", weakness:"方向性 未確定",
     cond: () => true,
-    desc:"多くの面でバランスが取れているか、まだ自分のパターンが定まっていない段階。可能性がたくさんある！これからが楽しみ。",
+    desc:"まだ転職先（＝得意な型）が定まっていないルーキー。多くのステータスがバランス型で、可能性はたくさんあるが、逆に「自分の軸」が見えにくく優柔不断になりがち。これからが楽しみな伸びしろタイプ。",
     strengths:["柔軟性がある","偏りが少ない","いろんなタイプと関われる"],
     weaks:["軸がまだ定まっていない","方向性が見えにくい","優柔不断になりやすい"],
     hint:"このワークで「自分の傾向」をじっくり探ってみよう。ネガティブを沢山書き出すパートで、パターンを見つけることから始めて。"
@@ -775,6 +797,7 @@ function showResult() {
   document.getElementById('r-emoji').textContent = char.emoji;
   document.getElementById('r-name').textContent = char.name;
   document.getElementById('r-type').textContent = char.type;
+  document.getElementById('r-debuff').textContent = char.weakness;
   document.getElementById('r-desc').textContent = char.desc;
   document.getElementById('r-hint').textContent = char.hint;
 
