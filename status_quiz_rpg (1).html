@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自分ステータス診断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a1a;
+    --sky: #3a7bd5;
+    --ground: #3d2b1f;
+    --grass: #2d6e2d;
+    --panel-bg: #0d0d0d;
+    --panel-border: #e8e0c0;
+    --surface: #141428;
+    --text: #e8e0c0;
+    --text2: #b0a880;
+    --text3: #786850;
+    --accent: #f5c518;
+    --accent2: #ff6b35;
+    --green: #44cc44;
+    --coral: #ff4444;
+    --blue: #4488ff;
+    --purple: #cc44ff;
+    --hp-green: #22dd44;
+    --mp-blue: #2299ff;
+  }
+
+  /* Pixel font helper */
+  .pixel { font-family: 'DotGothic16', monospace; }
+
+  body {
+    font-family: 'DotGothic16', 'Noto Sans JP', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 3rem;
+    image-rendering: pixelated;
+  }
+
+  /* Scrolling sky background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(180deg, #3a7bd5 0%, #5a9be5 40%, #2d6e2d 40%, #2d6e2d 44%, #3d2b1f 44%, #3d2b1f 100%);
+    z-index: -2;
+  }
+
+  /* Pixel clouds */
+  body::after {
+    content: '☁ ☁  ☁   ☁ ☁';
+    position: fixed;
+    top: 4%;
+    left: 0;
+    width: 200%;
+    font-size: 28px;
+    color: rgba(255,255,255,0.8);
+    z-index: -1;
+    animation: scrollClouds 30s linear infinite;
+    letter-spacing: 60px;
+    white-space: nowrap;
+  }
+
+  @keyframes scrollClouds {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  /* RPG Panel frame */
+  .rpg-panel {
+    background: var(--panel-bg);
+    border: 4px solid var(--panel-border);
+    box-shadow:
+      inset 0 0 0 2px #0d0d0d,
+      4px 4px 0 rgba(0,0,0,0.6);
+    padding: 1.25rem;
+    margin-bottom: 14px;
+    position: relative;
+    image-rendering: pixelated;
+  }
+  .rpg-panel::before {
+    content: '◆';
+    position: absolute;
+    top: -12px; left: 50%;
+    transform: translateX(-50%);
+    color: var(--accent);
+    font-size: 14px;
+    background: var(--panel-bg);
+    padding: 0 6px;
+  }
+
+  /* Header */
+  .site-header {
+    padding: 1rem 1rem 0.5rem;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    flex-shrink: 0;
+    image-rendering: pixelated;
+  }
+  .logo-text {
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+  }
+
+  /* Screen management */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Intro screen */
+  .hero {
+    padding: 1.5rem 0 1rem;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.08em;
+    border: 2px solid #000;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.8), 0 0 20px rgba(245,197,24,0.4);
+    letter-spacing: 0.05em;
+  }
+  .hero p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.8;
+    max-width: 320px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .info-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .info-card {
+    background: var(--surface);
+    border: 3px solid var(--panel-border);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+    padding: 0.875rem;
+    text-align: center;
+  }
+  .info-card .num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--hp-green);
+    display: block;
+    margin-bottom: 2px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+  }
+  .info-card .label {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .axis-list {
+    background: var(--surface);
+    border: 3px solid var(--panel-border);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  .axis-list .axis-title {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+    border-bottom: 2px solid var(--text3);
+    padding-bottom: 6px;
+  }
+  .axis-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    background: #1a1a3a;
+    color: var(--text2);
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 2px solid var(--text3);
+    font-weight: 500;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+
+  /* Quiz screen */
+  .quiz-top {
+    padding: 1rem 0 0.75rem;
+  }
+  .prog-wrap {
+    margin-bottom: 0.75rem;
+  }
+  .prog-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .prog-track {
+    background: #1a1a1a;
+    border: 2px solid var(--text3);
+    height: 16px;
+    overflow: hidden;
+    image-rendering: pixelated;
+  }
+  .prog-fill {
+    height: 100%;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--hp-green) 0px,
+      var(--hp-green) 8px,
+      #1aaa34 8px,
+      #1aaa34 10px
+    );
+    transition: width 0.4s steps(10);
+    image-rendering: pixelated;
+  }
+
+  .q-card {
+    background: var(--surface);
+    border: 3px solid var(--panel-border);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+    padding: 1.25rem;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .q-tag {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 10px;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.06em;
+    border: 2px solid #000;
+    box-shadow: 2px 2px 0 #000;
+  }
+  .q-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+  }
+  .q-text::before {
+    content: '▶ ';
+    color: var(--accent);
+  }
+  .slider-ends {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    border: 2px solid var(--text3);
+    background: #1a1a1a;
+    outline: none;
+    cursor: pointer;
+    image-rendering: pixelated;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid #000;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+    image-rendering: pixelated;
+  }
+  input[type=range]::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+  }
+  .slider-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--hp-green);
+    min-width: 44px;
+    text-align: right;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+  }
+
+  /* Result screen */
+  .result-hero {
+    text-align: center;
+    padding: 1.5rem 0 1rem;
+  }
+  .char-emoji {
+    font-size: 56px;
+    display: block;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+    filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.6));
+    animation: floatChar 2s ease-in-out infinite;
+  }
+  @keyframes floatChar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .char-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 14px;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.06em;
+    border: 2px solid #000;
+    box-shadow: 3px 3px 0 #000;
+  }
+  .char-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.8), 0 0 20px rgba(245,197,24,0.3);
+  }
+  .char-type {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .res-section {
+    background: var(--surface);
+    border: 3px solid var(--panel-border);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+    padding: 1.25rem;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .res-section-title {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+    border-bottom: 2px solid var(--text3);
+    padding-bottom: 6px;
+  }
+  .res-desc {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 3px solid var(--panel-border);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
+    padding: 0.875rem;
+  }
+  .stat-name {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .stat-track {
+    background: #0a0a0a;
+    border: 2px solid #333;
+    height: 12px;
+    overflow: hidden;
+    margin-bottom: 4px;
+    image-rendering: pixelated;
+  }
+  .stat-fill {
+    height: 100%;
+    image-rendering: pixelated;
+  }
+  .stat-num {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .point-list { list-style: none; }
+  .point-list li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--text3);
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .point-list li:last-child { border-bottom: none; }
+  .dot {
+    width: 8px; height: 8px;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .dot-green { background: var(--green); }
+  .dot-coral { background: var(--coral); }
+
+  .hint-card {
+    background: #0d0d2a;
+    border: 3px solid var(--mp-blue);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+    padding: 1.25rem;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .hint-card::before {
+    content: '★ HINT ★';
+    position: absolute;
+    top: -12px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--mp-blue);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 10px;
+    border: 2px solid #000;
+  }
+  .hint-label {
+    font-size: 11px;
+    color: var(--mp-blue);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    display: none;
+  }
+  .hint-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+
+  /* Buttons */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    border: 4px solid #000;
+    transition: transform 0.08s;
+    font-family: 'DotGothic16', 'Noto Sans JP', monospace;
+    letter-spacing: 0.08em;
+    image-rendering: pixelated;
+  }
+  .btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: none !important;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    box-shadow: 5px 5px 0 #000;
+    margin-bottom: 10px;
+  }
+  .btn-primary:hover {
+    background: #ffd740;
+  }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text2);
+    border: 3px solid var(--text3);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+  }
+  .btn-ghost:hover { background: #1a1a3a; }
+
+  /* Blinking cursor */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .blink { animation: blink 1s step-end infinite; }
+
+  .footer {
+    text-align: center;
+    margin-top: 2.5rem;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* Pixel star decorations */
+  .star-deco {
+    text-align: center;
+    color: var(--accent);
+    font-size: 12px;
+    letter-spacing: 8px;
+    margin: 0.5rem 0;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo-dot"></div>
+  <span class="logo-text">⚔ ゼミ　自分ステータス診断 ⚔</span>
+</header>
+
+<!-- Intro -->
+<div id="screen-intro" class="screen active">
+  <div class="wrap">
+    <div class="hero">
+      <span class="hero-badge">★ MBTI風　自己分析クエスト ★</span>
+      <h1>いまの自分を<br>ちゃんと知ろう</h1>
+      <p>スライダーを動かすだけで、あなたの今のステータスとタイプキャラがわかります。<br><span class="blink">▼</span></p>
+    </div>
+
+    <div class="info-cards">
+      <div class="info-card">
+        <span class="num">8問</span>
+        <span class="label">クエスト数</span>
+      </div>
+      <div class="info-card">
+        <span class="num">約3分</span>
+        <span class="label">クリア時間</span>
+      </div>
+    </div>
+
+    <div class="axis-list rpg-panel">
+      <div class="axis-title">▶ 測定する8つのステータス</div>
+      <div class="axis-chips">
+        <span class="chip">外向性</span>
+        <span class="chip">感情の揺れやすさ</span>
+        <span class="chip">計画性</span>
+        <span class="chip">自己批判度</span>
+        <span class="chip">自己表現力</span>
+        <span class="chip">比較癖</span>
+        <span class="chip">行動力</span>
+        <span class="chip">他者配慮過多</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="startQuiz()">▶ 診断クエストをはじめる</button>
+    <p style="text-align:center; font-size:11px; color:var(--text3); margin-top:0.75rem;">回答内容は保存されません</p>
+  </div>
+</div>
+
+<!-- Quiz -->
+<div id="screen-quiz" class="screen">
+  <div class="wrap">
+    <div class="quiz-top">
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span id="q-counter">Q1 / 8</span>
+          <span id="q-pct">0%</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div id="q-container"></div>
+    <button class="btn btn-primary" onclick="showResult()" style="margin-top:0.5rem;">⚔ 結果を見る</button>
+    <div class="footer">※スライダーは50%からスタートしています。</div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="screen-result" class="screen">
+  <div class="wrap">
+    <div class="result-hero">
+      <span class="char-emoji" id="r-emoji"></span>
+      <div class="char-badge">★ あなたのタイプ ★</div>
+      <div class="char-name" id="r-name"></div>
+      <div class="char-type" id="r-type"></div>
+    </div>
+
+    <div class="res-section rpg-panel">
+      <div class="res-section-title">▶ あなたについて</div>
+      <div class="res-desc" id="r-desc"></div>
+    </div>
+
+    <div class="star-deco">★ ★ ★</div>
+    <div class="stat-grid" id="r-stats"></div>
+
+    <div class="res-section rpg-panel">
+      <div class="res-section-title">▶ 強み</div>
+      <ul class="point-list" id="r-strengths"></ul>
+    </div>
+
+    <div class="res-section rpg-panel">
+      <div class="res-section-title">▶ 直したいかも？なところ</div>
+      <ul class="point-list" id="r-weaks"></ul>
+    </div>
+
+    <div class="hint-card">
+      <div class="hint-label">ワークのヒント</div>
+      <div class="hint-text" id="r-hint"></div>
+    </div>
+
+    <button class="btn btn-ghost" onclick="restart()">↩ もう一度やる</button>
+    <div class="footer">© 2025 ゼミ　自分ステータス診断</div>
+  </div>
+</div>
+
+<script>
+const questions = [
+  { id:"social",    text:"人と一緒にいると元気になる？それとも一人でいると充電できる？", left:"一人が好き", right:"みんなが好き", axis:"外向性", color:"#378ADD" },
+  { id:"emotion",   text:"感情が揺れたとき、どのくらい引きずってしまう？", left:"すぐ切り替えられる", right:"かなり引きずる", axis:"感情の揺れやすさ", color:"#D4537E" },
+  { id:"plan",      text:"物事はどのくらい計画を立ててから動く？", left:"直感・即行動", right:"しっかり計画派", axis:"計画性", color:"#534AB7" },
+  { id:"selfcrit",  text:"自分のミスや失敗を、どのくらい責めてしまう？", left:"あまり気にしない", right:"かなり責める", axis:"自己批判度", color:"#D85A30" },
+  { id:"express",   text:"自分の気持ちや意見、どのくらい表に出せている？", left:"あまり言えない", right:"どんどん言える", axis:"自己表現力", color:"#1D9E75" },
+  { id:"compare",   text:"他の人と自分を比べてしまうことはある？", left:"ほぼしない", right:"しょっちゅうしてしまう", axis:"比較癖", color:"#BA7517" },
+  { id:"action",    text:"やりたいことがあったとき、どのくらいすぐ動ける？", left:"なかなか動けない", right:"すぐ動ける", axis:"行動力", color:"#639922" },
+  { id:"care",      text:"他の人のことを気にしすぎてしまうことはある？", left:"あまり気にしない", right:"かなり気にしてしまう", axis:"他者配慮過多", color:"#7F77DD" }
+];
+
+const vals = {};
+questions.forEach(q => vals[q.id] = 50);
+
+const characters = [
+  {
+    name:"孤独な思索者", emoji:"🌙", type:"内向・感情型",
+    cond: s => s.social < 40 && s.emotion > 55 && s.selfcrit > 55,
+    desc:"一人の時間が好きで、物事を深く考える。感情が豊かな分、傷つきやすく、自分を責めてしまうことも。内側に宝がいっぱい詰まっているタイプ。",
+    strengths:["深い洞察力と共感力がある","真剣に物事に向き合える","自己分析が得意"],
+    weaks:["自己批判が強くなりすぎる","人と比べてへこんでしまう","行動するまでに時間がかかる"],
+    hint:"「直したいネガティブ」を選ぶとき、自己批判と比較癖に注目してみよう。自分に優しくするのがこのワークのテーマかも。"
+  },
+  {
+    name:"熱血行動派", emoji:"🔥", type:"外向・行動型",
+    cond: s => s.social > 60 && s.action > 60 && s.plan < 45,
+    desc:"エネルギッシュで思い立ったらすぐ動ける。勢いはあるが、計画性が薄く後で困ることも。でもその推進力は本物！",
+    strengths:["行動が早くフットワーク軽い","周りを巻き込む力がある","失敗を引きずらない"],
+    weaks:["計画を立てずに動きすぎる","後先を考えずに突っ走る","ひとりで抱え込んで燃え尽きる"],
+    hint:"計画性を少しだけ意識するだけで、行動の質がぐっと上がる。アクションプランの「期限設定」を丁寧にやってみて。"
+  },
+  {
+    name:"慎重な完璧主義者", emoji:"📐", type:"計画・自己批判型",
+    cond: s => s.plan > 60 && s.selfcrit > 60 && s.action < 55,
+    desc:"準備万端にしないと動けないタイプ。細かいところまで気にするが、完璧を求めすぎてフリーズしてしまうことも。質へのこだわりは本物。",
+    strengths:["緻密な準備ができる","ミスを減らせる","品質にこだわれる"],
+    weaks:["完璧主義で動き出せない","自分に厳しすぎる","失敗を恐れてチャレンジを避けがち"],
+    hint:"「完璧じゃなくていい」が合言葉。60点で出すことを練習するアクションを考えてみて。"
+  },
+  {
+    name:"気遣いマスター", emoji:"🫶", type:"他者配慮・共感型",
+    cond: s => s.care > 65 && s.express < 50 && s.emotion > 50,
+    desc:"人のことを優先しすぎて、自分のことは後回しになりがち。頼まれると断れないことも多い。でも信頼される存在。",
+    strengths:["場の空気が読める","人を大切にできる","信頼されやすい"],
+    weaks:["自分の気持ちを言えない","NOが言えない","他人の評価が気になりすぎる"],
+    hint:"「自分のニーズを1つ声に出す」をワークの中で意識してみよう。よしよしタイムで自分を労わる練習から始めよう。"
+  },
+  {
+    name:"比較モンスター", emoji:"👁", type:"比較・自己否定型",
+    cond: s => s.compare > 65 && s.selfcrit > 55,
+    desc:"SNSや周りと自分を比べてしまい、自己評価が下がりやすい。でも向上心の裏返しでもある。比較先をうまく使えると強い！",
+    strengths:["向上心がある","観察力が高い","他者の良さを見つけられる"],
+    weaks:["比べて落ち込む","自分に自信が持てない","ネガティブが止まらない"],
+    hint:"比較先をロールモデルとして使えるのがこのワークの鍵。「理想のキャラが何をしているか」を想像するパートが特に効くはず！"
+  },
+  {
+    name:"明るいムードメーカー", emoji:"🌟", type:"外向・感情表現型",
+    cond: s => s.social > 60 && s.express > 60 && s.emotion < 55,
+    desc:"自分の気持ちをどんどん表現できて、場を明るくする力がある。ただし、ひとりで頑張りすぎて燃え尽きることも。",
+    strengths:["表現力が高い","人を元気にできる","フットワークが軽い"],
+    weaks:["無理して明るく振る舞う","弱みを見せられない","一人になると燃え尽きる"],
+    hint:"「本当はしんどいときにSOSを出せるか？」をテーマに振り返って。弱さを見せることがむしろ強さになる。"
+  },
+  {
+    name:"静かなリアリスト", emoji:"🗿", type:"内向・論理型",
+    cond: s => s.social < 45 && s.emotion < 45 && s.plan > 50,
+    desc:"感情より事実と論理で動くタイプ。冷静だが、共感が薄いと思われることも。信頼性と安定感は抜群。",
+    strengths:["冷静に判断できる","感情に流されない","分析が得意"],
+    weaks:["感情表現が乏しい","人と距離を置きすぎる","共感するのが苦手"],
+    hint:"ワーク中、感情的な言葉を意識して使ってみることが成長のカギ。よしよしタイムを大切にしてみて。"
+  },
+  {
+    name:"迷子の可能性人間", emoji:"🌀", type:"バランス迷子型",
+    cond: () => true,
+    desc:"多くの面でバランスが取れているか、まだ自分のパターンが定まっていない段階。可能性がたくさんある！これからが楽しみ。",
+    strengths:["柔軟性がある","偏りが少ない","いろんなタイプと関われる"],
+    weaks:["軸がまだ定まっていない","方向性が見えにくい","優柔不断になりやすい"],
+    hint:"このワークで「自分の傾向」をじっくり探ってみよう。ネガティブを沢山書き出すパートで、パターンを見つけることから始めて。"
+  }
+];
+
+function buildQuiz() {
+  const c = document.getElementById('q-container');
+  c.innerHTML = '';
+  questions.forEach((q, i) => {
+    const d = document.createElement('div');
+    d.className = 'q-card';
+    d.innerHTML = `
+      <span class="q-tag">${q.axis}</span>
+      <div class="q-text">${q.text}</div>
+      <div class="slider-ends">
+        <span>◀ ${q.left}</span>
+        <span>${q.right} ▶</span>
+      </div>
+      <div class="slider-row">
+        <input type="range" min="0" max="100" value="50" step="1"
+          id="sl-${q.id}"
+          oninput="onSlide('${q.id}', this.value)"
+          style="background: linear-gradient(to right, ${q.color} 50%, #1a1a1a 50%)">
+        <span class="slider-val" id="vl-${q.id}">50%</span>
+      </div>`;
+    c.appendChild(d);
+  });
+}
+
+function onSlide(id, v) {
+  vals[id] = parseInt(v);
+  document.getElementById('vl-' + id).textContent = v + '%';
+  const q = questions.find(q => q.id === id);
+  const sl = document.getElementById('sl-' + id);
+  sl.style.background = `linear-gradient(to right, ${q.color} ${v}%, #1a1a1a ${v}%)`;
+
+  const answered = Object.values(vals).filter(x => x !== 50).length;
+  const pct = Math.round((answered / questions.length) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('q-pct').textContent = pct + '%';
+  document.getElementById('q-counter').textContent = `Q${Math.min(answered + 1, questions.length)} / ${questions.length}`;
+}
+
+function startQuiz() {
+  showScreen('screen-quiz');
+}
+
+function showResult() {
+  const s = vals;
+  const char = characters.find(c => c.cond(s)) || characters[characters.length - 1];
+
+  document.getElementById('r-emoji').textContent = char.emoji;
+  document.getElementById('r-name').textContent = char.name;
+  document.getElementById('r-type').textContent = char.type;
+  document.getElementById('r-desc').textContent = char.desc;
+  document.getElementById('r-hint').textContent = char.hint;
+
+  const sl = document.getElementById('r-strengths');
+  sl.innerHTML = '';
+  char.strengths.forEach(t => {
+    sl.innerHTML += `<li><span class="dot dot-green"></span>${t}</li>`;
+  });
+
+  const wl = document.getElementById('r-weaks');
+  wl.innerHTML = '';
+  char.weaks.forEach(t => {
+    wl.innerHTML += `<li><span class="dot dot-coral"></span>${t}</li>`;
+  });
+
+  const sg = document.getElementById('r-stats');
+  sg.innerHTML = '';
+  questions.forEach(q => {
+    const v = vals[q.id];
+    sg.innerHTML += `
+      <div class="stat-card">
+        <div class="stat-name">${q.axis}</div>
+        <div class="stat-track">
+          <div class="stat-fill" style="width:${v}%; background:${q.color}"></div>
+        </div>
+        <div class="stat-num" style="color:${q.color}">${v}%</div>
+      </div>`;
+  });
+
+  showScreen('screen-result');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restart() {
+  questions.forEach(q => {
+    vals[q.id] = 50;
+    const sl = document.getElementById('sl-' + q.id);
+    if (sl) {
+      sl.value = 50;
+      sl.style.background = `linear-gradient(to right, ${q.color} 50%, #1a1a1a 50%)`;
+    }
+    const vl = document.getElementById('vl-' + q.id);
+    if (vl) vl.textContent = '50%';
+  });
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('q-pct').textContent = '0%';
+  document.getElementById('q-counter').textContent = `Q1 / ${questions.length}`;
+  showScreen('screen-intro');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+buildQuiz();
+</script>
+</body>
+</html>
